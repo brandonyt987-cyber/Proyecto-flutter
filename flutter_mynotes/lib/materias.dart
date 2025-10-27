@@ -194,8 +194,64 @@ class _MaterialScreenState extends State<MaterialScreen> {
               label: '',
             ),
           ]
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: _themeProvider.primaryColor,
+        onPressed: () async {
+          final resultado = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CrearMateriaScreen(),
+            ),
+          );
+        }
+        child: const Icon(Icons.add, color: Colors.white),
+        ),
       );
-    }
-  )
+    },
+  );
 }
+Widget _buildFloatingActionButton(BuildContext context), {
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+}
+  return Container(
+    decoration: BoxDecoration(
+      color: Theme.of(context).primaryColor,
+      borderRadius: BorderRadius.circular(15),
+      offset: const Offset(0, 5),
+    ),
+    ],
+  ),
+  child: Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(15),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: _themeProvider.primaryColor,
+              size: 30,
+              ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: _themeProvider.textColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
 }

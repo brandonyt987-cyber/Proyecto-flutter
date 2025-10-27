@@ -76,7 +76,20 @@ class _MaterialScreenState extends State<MaterialScreen> {
                   fontWeight: FontWeight.bold,
                   color: _themeProvider.textColor,
                 ),
-              )
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buiildMenuCard(
+                      context,
+                      Icons. Icons.edit,
+                      title: 'Nueva Materia',
+                      onTap: ()
+                    ),
+                    ),
+                ],
+              ),
             ]
           )
         ),

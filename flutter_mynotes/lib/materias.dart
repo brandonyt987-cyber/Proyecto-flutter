@@ -174,9 +174,26 @@ class _MaterialScreenState extends State<MaterialScreen> {
                   )
             ],
           ),
-
         ),
-          
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: _themeProvider.cardColor,
+          selectedItemColor: _themeProvider.primaryColor,
+          unselectedIconTheme: IconThemeData(color: Colors.grey),
+          currentIndex: 0,
+          items: const[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.grid_view),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.circle),
+              label: '',
+            ),
+          ]
       );
     }
   )

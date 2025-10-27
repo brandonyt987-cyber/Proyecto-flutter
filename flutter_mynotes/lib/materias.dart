@@ -114,10 +114,69 @@ class _MaterialScreenState extends State<MaterialScreen> {
                 ],
               ),
               const SizedBox(height: 30),
+              if (_materias.isNotEmpty)
+                Expanded( 
+                  child: Center(
+                    child: Text(
+                      'No hay materias creadas',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: _themeProvider.textColor.withOpacity(0.6),
+                        ),
+                    ),
+                  ),
+                )
+                else
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _Materias.length,
+                      itemBuilder: (context, index) {
+                        final materia = _Materias[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 15),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: _themeProvider.cardColor,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.5),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  materia['nombre'],
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: _themeProvider.textColor,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  setState(() {
+                                    _materias.removeAt(index);
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  )
             ],
           ),
 
         ),
+          
       );
     }
   )

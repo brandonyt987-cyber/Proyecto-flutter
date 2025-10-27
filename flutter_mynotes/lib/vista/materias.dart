@@ -7,9 +7,14 @@ void main(List<String> args) {
   ));
 }
 
-class MateriasScreen extends StatelessWidget {
+class MateriasScreen extends StatefulWidget {
   const MateriasScreen({Key? key}) : super(key: key);
+  
+  @override
+  _MateriasScreenState createState() => _MateriasScreenState();
+}
 
+class _MateriasScreenState extends State<MateriasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -1,28 +1,264 @@
 import 'package:flutter/material.dart';
+import 'crear_materia.dart';
+import '../provider/theme_provider.dart';
 
+// Clase principal
+class MaterialScreen extends StatefulWidget {
+  const MaterialScreen({Key? key}) : super(key: key);
 
-void main(List<String> args) {
-  runApp(const MaterialApp(
-    home: MateriasScreen(),
-  ));
-}
-
-class MateriasScreen extends StatefulWidget {
-  const MateriasScreen({Key? key}) : super(key: key);
-  
   @override
-  _MateriasScreenState createState() => _MateriasScreenState();
+  _MaterialScreenState createState() => _MaterialScreenState();
 }
 
-class _MateriasScreenState extends State<MateriasScreen> {
+class _MaterialScreenState extends State<MaterialScreen> {
+  final ThemeProvider _themeProvider = ThemeProvider();
+  final List<Map<String, dynamic>> _materias = [];
+
+  void _AgregarMateria(String nombre) {
+    setState(() {
+      _materias.add({
+        'nombre': nombre,
+        'notas': [],
+        'promedio': 0.0,
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Materias'),
+    return ListenableBuilder(
+      listenable: _themeProvider,
+      builder: (context, child) {
+        return Scaffold(
+          backgroundColor: _themeProvider.backgroundColor,
+          appBar: AppBar(
+            backgroundColor: _themeProvider.primaryColor,
+            elevation: 0,
+            title: Row(
+              children: [
+                const Text(
+                  'MyNote. ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                Icon(
+                  _themeProvider.isDarkTheme ? Icons.nights_stay : Icons.wb_sunny,
+                  color: Colors.yellow,
+                  size: 24,
+                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _themeProvider.isDarkTheme ? Icons.wb_sunny : Icons.nights_stay,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  _themeProvider.toggleTheme();
+                },
+              ),
+            ],
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Materias',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: _themeProvider.textColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMenuCard(
+                        context,
+                        Icons.edit,
+                        'Nueva Materia',
+                        () async {
+                          final resultado = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CrearMateria(
+                                themeProvider: _themeProvider,
+                              ),
+                            ),
+                          );
+                          if (resultado != null) {
+                            _AgregarMateria(resultado);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildMenuCard(
+                        context,
+                        Icons.content_paste,
+                        'ver materias',
+                        () {
+                          //navegar por las listas de materias
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                Expanded(
+                  child: _materias.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No hay materias creadas',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: _themeProvider.textColor.withOpacity(0.6),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _materias.length,
+                          itemBuilder: (context, index) {
+                            final materia = _materias[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 15),
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: _themeProvider.cardColor,
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.5),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      materia['nombre'],
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: _themeProvider.textColor,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () {
+                                      setState(() {
+                                        _materias.removeAt(index);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: _themeProvider.cardColor,
+            selectedItemColor: _themeProvider.primaryColor,
+            unselectedIconTheme: const IconThemeData(color: Colors.grey),
+            currentIndex: 0,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.grid_view),
+                label: '',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.circle),
+                label: '',
+              ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: _themeProvider.primaryColor,
+            onPressed: () async {
+              final resultado = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CrearMateria(
+                    themeProvider: _themeProvider,
+                  ),
+                ),
+              );
+              if (resultado != null) {
+                _AgregarMateria(resultado);
+              }
+            },
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMenuCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    VoidCallback onTap,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _themeProvider.cardColor,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 5,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      body: const Center(
-        child: Text('Lista de Materias'),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(15),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                Icon(
+                  icon,
+                  color: _themeProvider.primaryColor,
+                  size: 30,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _themeProvider.textColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

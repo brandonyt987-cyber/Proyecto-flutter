@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'vista/crear_nota.dart';
+import 'vista/crear_materia.dart';
 import 'vista/theme_provider.dart';
 
 
@@ -81,17 +81,42 @@ class _MaterialScreenState extends State<MaterialScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: _buiildMenuCard(
+                    child: _buildMenuCard(
                       context,
-                      Icons. Icons.edit,
+                      Icon(Icons.edit),
                       title: 'Nueva Materia',
-                      onTap: ()
+                      onTap: () async {
+                        final resultado = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CrearMateriaScreen(
+                              themeProvider: _themeProvider,
+                            ),
+                          ),
+                        );
+                        if (resultado != null) {
+                          _AgregarMateria(resultado);
+                        }
+                      }
                     ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: _buildMenuCard(
+                        context, 
+                        Icon. Icons.content_paste,
+                        title: 'ver materias',
+                        onTap: () {
+                          //navegar por las listas de materias
+                        },
+                      ),
                     ),
                 ],
               ),
-            ]
-          )
+              const SizedBox(height: 30),
+            ],
+          ),
+
         ),
       );
     }

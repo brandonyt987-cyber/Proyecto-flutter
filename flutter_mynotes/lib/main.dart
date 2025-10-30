@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'vista/materias.dart';
 
 void main() {
   runApp(

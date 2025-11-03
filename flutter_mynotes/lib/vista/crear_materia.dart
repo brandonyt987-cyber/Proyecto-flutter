@@ -1,44 +1,100 @@
 import 'package:flutter/material.dart';
 import '../provider/theme_provider.dart';
 
-class CrearMateria extends StatefulWidget {
+class CrearMateriaFlotante extends StatefulWidget {
   final ThemeProvider themeProvider;
-  
-  const CrearMateria({
-    Key? key,
+  final Function(String) onGuardar;
+
+  const CrearMateriaFlotante({
+    super.key,
     required this.themeProvider,
-  }) : super(key: key);
+    required this.onGuardar,
+  });
 
   @override
-  _CrearMateriaState createState() => _CrearMateriaState();
+  State<CrearMateriaFlotante> createState() => _CrearMateriaFlotanteState();
 }
 
-class _CrearMateriaState extends State<CrearMateria> {
+class _CrearMateriaFlotanteState extends State<CrearMateriaFlotante> {
   final TextEditingController _nombreController = TextEditingController();
 
   @override
-  void dispose() {
-    _nombreController.dispose();
-    super.dispose();
-  }
-
-  void _guardarMateria() {
-    if (_nombreController.text.isNotEmpty) {
-      Navigator.pop(context, _nombreController.text.trim());
-    } else {
-      // Manejar el caso en que el nombre esté vacío
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('por favor ingresa un nombre para la materia'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-  
-  @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: widget.themeProvider.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.edit, color: widget.themeProvider.primaryColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Nueva materia',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: widget.themeProvider.textColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: _nombreController,
+                style: TextStyle(color: widget.themeProvider.textColor),
+                decoration: InputDecoration(
+                  hintText: 'Nombre de la materia',
+                  hintStyle: TextStyle(
+                    color: widget.themeProvider.textColor.withOpacity(0.6),
+                  ),
+                  filled: true,
+                  fillColor: widget.themeProvider.backgroundColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: widget.themeProvider.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    final nombre = _nombreController.text.trim();
+                    if (nombre.isNotEmpty) {
+                      widget.onGuardar(nombre);
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

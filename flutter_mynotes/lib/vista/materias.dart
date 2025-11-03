@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'crear_materia.dart';
 import '../provider/theme_provider.dart';
+import 'crear_materia.dart'; // 👈 nuevo formulario flotante
 
-// Clase principal
 class MaterialScreen extends StatefulWidget {
   const MaterialScreen({Key? key}) : super(key: key);
 
@@ -16,12 +15,22 @@ class _MaterialScreenState extends State<MaterialScreen> {
 
   void _AgregarMateria(String nombre) {
     setState(() {
-      _materias.add({
-        'nombre': nombre,
-        'notas': [],
-        'promedio': 0.0,
-      });
+      _materias.add({'nombre': nombre, 'notas': [], 'promedio': 0.0});
     });
+  }
+
+  void _mostrarFormularioFlotante() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.4),
+      builder: (context) {
+        return CrearMateriaFlotante(
+          themeProvider: _themeProvider,
+          onGuardar: _AgregarMateria,
+        );
+      },
+    );
   }
 
   @override
@@ -45,7 +54,9 @@ class _MaterialScreenState extends State<MaterialScreen> {
                   ),
                 ),
                 Icon(
-                  _themeProvider.isDarkTheme ? Icons.nights_stay : Icons.wb_sunny,
+                  _themeProvider.isDarkTheme
+                      ? Icons.nights_stay
+                      : Icons.wb_sunny,
                   color: Colors.yellow,
                   size: 24,
                 ),
@@ -54,12 +65,12 @@ class _MaterialScreenState extends State<MaterialScreen> {
             actions: [
               IconButton(
                 icon: Icon(
-                  _themeProvider.isDarkTheme ? Icons.wb_sunny : Icons.nights_stay,
+                  _themeProvider.isDarkTheme
+                      ? Icons.wb_sunny
+                      : Icons.nights_stay,
                   color: Colors.white,
                 ),
-                onPressed: () {
-                  _themeProvider.toggleTheme();
-                },
+                onPressed: _themeProvider.toggleTheme,
               ),
             ],
           ),
@@ -84,19 +95,7 @@ class _MaterialScreenState extends State<MaterialScreen> {
                         context,
                         Icons.edit,
                         'Nueva Materia',
-                        () async {
-                          final resultado = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CrearMateria(
-                                themeProvider: _themeProvider,
-                              ),
-                            ),
-                          );
-                          if (resultado != null) {
-                            _AgregarMateria(resultado);
-                          }
-                        },
+                        _mostrarFormularioFlotante, // 👈 antes era Navigator.push
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -104,10 +103,8 @@ class _MaterialScreenState extends State<MaterialScreen> {
                       child: _buildMenuCard(
                         context,
                         Icons.content_paste,
-                        'ver materias',
-                        () {
-                          //navegar por las listas de materias
-                        },
+                        'Ver Materias',
+                        () {},
                       ),
                     ),
                   ],
@@ -155,7 +152,10 @@ class _MaterialScreenState extends State<MaterialScreen> {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
                                     onPressed: () {
                                       setState(() {
                                         _materias.removeAt(index);
@@ -177,35 +177,14 @@ class _MaterialScreenState extends State<MaterialScreen> {
             unselectedIconTheme: const IconThemeData(color: Colors.grey),
             currentIndex: 0,
             items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: '',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.grid_view),
-                label: '',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.circle),
-                label: '',
-              ),
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+              BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: ''),
+              BottomNavigationBarItem(icon: Icon(Icons.circle), label: ''),
             ],
           ),
           floatingActionButton: FloatingActionButton(
             backgroundColor: _themeProvider.primaryColor,
-            onPressed: () async {
-              final resultado = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CrearMateria(
-                    themeProvider: _themeProvider,
-                  ),
-                ),
-              );
-              if (resultado != null) {
-                _AgregarMateria(resultado);
-              }
-            },
+            onPressed: _mostrarFormularioFlotante, // 👈 usa el mismo método
             child: const Icon(Icons.add, color: Colors.white),
           ),
         );
@@ -240,11 +219,7 @@ class _MaterialScreenState extends State<MaterialScreen> {
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-                Icon(
-                  icon,
-                  color: _themeProvider.primaryColor,
-                  size: 30,
-                ),
+                Icon(icon, color: _themeProvider.primaryColor, size: 30),
                 const SizedBox(height: 10),
                 Text(
                   title,

@@ -1,42 +1,37 @@
 import 'package:flutter/material.dart';
+import 'crear_materia.dart';
 import '../provider/theme_provider.dart';
-import 'crear_materia.dart'; // 👈 nuevo formulario flotante
+import 'notas.dart';
 
 class MaterialScreen extends StatefulWidget {
-  const MaterialScreen({Key? key}) : super(key: key);
+  const MaterialScreen({super.key});
 
   @override
-  _MaterialScreenState createState() => _MaterialScreenState();
+  State<MaterialScreen> createState() => _MaterialScreenState();
 }
 
 class _MaterialScreenState extends State<MaterialScreen> {
   final ThemeProvider _themeProvider = ThemeProvider();
   final List<Map<String, dynamic>> _materias = [];
 
-  void _AgregarMateria(String nombre) {
+  /// 🔹 Agregar materia a la lista
+  void agregarMateria(Map<String, dynamic> materia) {
     setState(() {
-      _materias.add({'nombre': nombre, 'notas': [], 'promedio': 0.0});
+      _materias.add({
+        'nombre': materia['nombre'],
+        'profesor': materia['profesor'],
+        'horario': materia['horario'],
+        'descripcion': materia['descripcion'],
+        'notas': [],
+        'promedio': 0.0,
+      });
     });
-  }
-
-  void _mostrarFormularioFlotante() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.4),
-      builder: (context) {
-        return CrearMateriaFlotante(
-          themeProvider: _themeProvider,
-          onGuardar: _AgregarMateria,
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _themeProvider,
+    return AnimatedBuilder(
+      animation: _themeProvider,
       builder: (context, child) {
         return Scaffold(
           backgroundColor: _themeProvider.backgroundColor,
@@ -46,7 +41,7 @@ class _MaterialScreenState extends State<MaterialScreen> {
             title: Row(
               children: [
                 const Text(
-                  'MyNote. ',
+                  'MyNote.',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -88,36 +83,48 @@ class _MaterialScreenState extends State<MaterialScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                /// 🔹 Menú superior
                 Row(
                   children: [
                     Expanded(
                       child: _buildMenuCard(
-                        context,
-                        Icons.edit,
-                        'Nueva Materia',
-                        _mostrarFormularioFlotante, // 👈 antes era Navigator.push
+                        icon: Icons.edit,
+                        title: 'Nueva Materia',
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => CrearMateria(
+                              onGuardar: agregarMateria,
+                              themeProvider: _themeProvider,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
                       child: _buildMenuCard(
-                        context,
-                        Icons.content_paste,
-                        'Ver Materias',
-                        () {},
+                        icon: Icons.content_paste,
+                        title: 'Ver materias',
+                        onTap: () {},
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 30),
+
+                /// 🔹 Listado de materias
                 Expanded(
                   child: _materias.isEmpty
                       ? Center(
                           child: Text(
                             'No hay materias creadas',
                             style: TextStyle(
-                              fontSize: 20,
-                              color: _themeProvider.textColor.withOpacity(0.6),
+                              fontSize: 18,
+                              color: _themeProvider.textColor.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                           ),
                         )
@@ -125,24 +132,39 @@ class _MaterialScreenState extends State<MaterialScreen> {
                           itemCount: _materias.length,
                           itemBuilder: (context, index) {
                             final materia = _materias[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 15),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: _themeProvider.cardColor,
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.5),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
+                            return GestureDetector(
+                              onTap: () {
+                                // ✅ Navega a la pantalla de notas.dart
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => NotasScreen(
+                                      materia: materia,
+                                      themeProvider: _themeProvider,
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 15),
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: _themeProvider.cardColor,
+                                  borderRadius: BorderRadius.circular(15),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
                                       materia['nombre'],
                                       style: TextStyle(
                                         fontSize: 18,
@@ -150,19 +172,44 @@ class _MaterialScreenState extends State<MaterialScreen> {
                                         color: _themeProvider.textColor,
                                       ),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Profesor: ${materia['profesor']}',
+                                      style: TextStyle(
+                                        color: _themeProvider.textColor,
+                                      ),
                                     ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _materias.removeAt(index);
-                                      });
-                                    },
-                                  ),
-                                ],
+                                    Text(
+                                      'Horario: ${materia['horario']}',
+                                      style: TextStyle(
+                                        color: _themeProvider.textColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      materia['descripcion'] ?? '',
+                                      style: TextStyle(
+                                        color: _themeProvider.textColor
+                                            .withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _materias.removeAt(index);
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -171,20 +218,19 @@ class _MaterialScreenState extends State<MaterialScreen> {
               ],
             ),
           ),
-          bottomNavigationBar: BottomNavigationBar(
-            backgroundColor: _themeProvider.cardColor,
-            selectedItemColor: _themeProvider.primaryColor,
-            unselectedIconTheme: const IconThemeData(color: Colors.grey),
-            currentIndex: 0,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-              BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: ''),
-              BottomNavigationBarItem(icon: Icon(Icons.circle), label: ''),
-            ],
-          ),
+
+          /// 🔹 Botón flotante
           floatingActionButton: FloatingActionButton(
             backgroundColor: _themeProvider.primaryColor,
-            onPressed: _mostrarFormularioFlotante, // 👈 usa el mismo método
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => CrearMateria(
+                  onGuardar: agregarMateria,
+                  themeProvider: _themeProvider,
+                ),
+              );
+            },
             child: const Icon(Icons.add, color: Colors.white),
           ),
         );
@@ -192,19 +238,19 @@ class _MaterialScreenState extends State<MaterialScreen> {
     );
   }
 
-  Widget _buildMenuCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    VoidCallback onTap,
-  ) {
+  /// 🔹 Tarjetas del menú superior
+  Widget _buildMenuCard({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: _themeProvider.cardColor,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 5,
             offset: const Offset(0, 3),
           ),

@@ -26,20 +26,27 @@ class _MyNoteAppState extends State<MyNoteApp> {
         backgroundColor: isDark ? const Color(0xFF6A4C9C) : Colors.white,
         body: Stack(
           children: [
-            // 🔵 Fondo decorativo inferior
+            //circulo
             Positioned(
-              bottom: -50,
-              right: -60,
-              child: Container(
-                width: 240,
-                height: 240,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.black54 : Colors.blue[300],
-                  borderRadius: BorderRadius.circular(180),
+              bottom: -80, // lo mueve más abajo
+              right: -60, // mueve hacia la izquierda para coincidir con Figma
+              child: FractionalTranslation(
+                translation: const Offset(
+                  0.1,
+                  0.1,
+                ), // ajusta leve desplazamiento
+                child: Container(
+                  width: 320, // más grande para que sobresalga
+                  height: 320,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF4B2C74)
+                        : const Color(0xFF80B4FF),
+                    borderRadius: BorderRadius.circular(250),
+                  ),
                 ),
               ),
             ),
-
             // 🌙 Interruptor modo oscuro/claro arriba a la derecha
             SafeArea(
               child: Padding(
@@ -125,22 +132,6 @@ class _MyNoteAppState extends State<MyNoteApp> {
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-
-        // ⚙️ Barra inferior
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: isDark ? const Color(0xFF4B2C74) : Colors.white,
-          selectedItemColor: isDark ? Colors.white : Colors.blueAccent,
-          unselectedItemColor: Colors.grey,
-          currentIndex: 0,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-            BottomNavigationBarItem(icon: Icon(Icons.note), label: 'Notas'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings),
-              label: 'Ajustes',
             ),
           ],
         ),

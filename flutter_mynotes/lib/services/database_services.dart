@@ -23,13 +23,13 @@ class DatabaseService {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE usuarios (
+      CREATE TABLE usuarios_notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
         apellido TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        rol INTEGER NOT NULL  -- 1: estudiante, 2: profesor
+        rol INTEGER NOT NULL
       )
     ''');
     await db.execute('''
@@ -37,7 +37,7 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuario_id INTEGER NOT NULL,
         curso TEXT NOT NULL,
-        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        FOREIGN KEY (usuario_id) REFERENCES usuarios_notes(id) ON DELETE CASCADE
       )
     ''');
     await db.execute('''
@@ -45,20 +45,20 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuario_id INTEGER NOT NULL,
         area TEXT NOT NULL,
-        cursos_asignados TEXT NOT NULL,  -- JSON array
-        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        cursos_asignados TEXT NOT NULL,
+        FOREIGN KEY (usuario_id) REFERENCES usuarios_notes(id) ON DELETE CASCADE
       )
     ''');
     await db.execute('''
       CREATE TABLE materias (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
-        profesor_id INTEGER NOT NULL,  -- Referencia a profesores.id
+        profesor_id INTEGER NOT NULL,
         dias TEXT NOT NULL,
         horario_inicio TEXT NOT NULL,
         horario_fin TEXT NOT NULL,
         salon INTEGER NOT NULL,
-        cursos_asignados TEXT NOT NULL  -- JSON array
+        cursos_asignados TEXT NOT NULL
       )
     ''');
     await db.execute('''
@@ -66,15 +66,26 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         materia_id INTEGER NOT NULL,
         nombre_nota TEXT NOT NULL,
-        estudiante_id INTEGER NOT NULL,  -- Referencia a estudiantes.id
+        estudiante_id INTEGER NOT NULL,
         calificacion REAL
       )
     ''');
   }
 
+  // ✅ RESETEAR BD SI EMAIL DUPLICADO (SOLO PARA PRUEBAS)
   Future<int> insertUsuario(Map<String, dynamic> usuario) async {
     final db = await database;
-    return await db.insert('usuarios', usuario);
+    try {
+      return await db.insert('usuarios_notes', usuario);
+    } catch (e) {
+      if (e.toString().contains('UNIQUE constraint failed')) {
+        // Borrar BD y reintentar
+        await deleteDatabase();
+        await database; // Recrear BD
+        return await db.insert('usuarios_notes', usuario);
+      }
+      rethrow;
+    }
   }
 
   Future<int> insertEstudiante(Map<String, dynamic> estudiante) async {
@@ -89,7 +100,7 @@ class DatabaseService {
 
   Future<Map<String, dynamic>?> getUsuarioByEmail(String email) async {
     final db = await database;
-    final result = await db.query('usuarios', where: 'email = ?', whereArgs: [email]);
+    final result = await db.query('usuarios_notes', where: 'email = ?', whereArgs: [email]);
     return result.isNotEmpty ? result.first : null;
   }
 
@@ -127,7 +138,7 @@ class DatabaseService {
           dia: dia, horarioInicio: materia['horario_inicio'], horarioFin: materia['horario_fin'],
           salon: materia['salon'], curso: curso,
         )) {
-              throw Exception('Horario ocupado en salón ${materia['salon']} para $curso en $dia');  // Mensaje con 'salón' para UI, pero variable es 'salon'
+          throw Exception('Horario ocupado en salón ${materia['salon']} para $curso en $dia');
         }
       }
     }
@@ -170,5 +181,12 @@ class DatabaseService {
   Future<void> updateCalificacion(int notaId, double calificacion) async {
     final db = await database;
     await db.update('notas', {'calificacion': calificacion}, where: 'id = ?', whereArgs: [notaId]);
+  }
+
+  Future<void> deleteDatabase() async {
+    final databasesPath = await getDatabasesPath();
+    final path = join(databasesPath, 'escuela.db');
+    await databaseFactory.deleteDatabase(path);
+    _db = null;
   }
 }

@@ -9,6 +9,7 @@ import 'providers/materia_provider.dart';
 import 'providers/notas_provider.dart';
 import 'providers/theme_provider.dart';
 import 'vista/login_screen.dart';
+import 'services/database_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,9 @@ void main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  // 🔥 SOLO PARA DESARROLLO: Borra la BD al iniciar (opcional)
+  // await DatabaseService.instance.deleteDatabase();
 
   runApp(const MyNoteApp());
 }

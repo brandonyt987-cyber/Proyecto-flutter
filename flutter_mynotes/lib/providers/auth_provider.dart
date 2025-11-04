@@ -12,7 +12,7 @@ class AuthProvider with ChangeNotifier {
   Usuario? get usuarioActual => _usuarioActual;
 
   bool validarNombreApellido(String valor) {
-    final regex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{3,40}$');
+    final regex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{6,40}$');
     return regex.hasMatch(valor);
   }
 

@@ -1,11 +1,10 @@
-// vistas/register_screen.dart: Nueva pantalla de registro con validaciones paso a paso, roles por dominio, formularios condicionales.
-
-import 'package:email_validator/email_validator.dart';  // Import para validar emails
+import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import 'materias.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -19,182 +18,221 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  final _nombreFocus = FocusNode();
-  final _apellidoFocus = FocusNode();
-  final _emailFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-  final _confirmPasswordFocus = FocusNode();
-
-  String? _curso;
-  String? _area;
-  List<String> _cursosAsignados = [];
-  int? _rol;
   String? _error;
-
-  final List<String> cursosDisponibles = ['sexto', 'séptimo', 'octavo', 'noveno', 'décimo', 'once'];
-
-  @override
-  void initState() {
-    super.initState();
-    _nombreController.addListener(() => _validarYAvanzar(_nombreController, _apellidoFocus));
-    _apellidoController.addListener(() => _validarYAvanzar(_apellidoController, _emailFocus));
-    _emailController.addListener(() => _validarYAvanzar(_emailController, _passwordFocus));  // Validación gradual para email
-    _passwordController.addListener(() => _validarYAvanzar(_passwordController, _confirmPasswordFocus));
-  }
-
-  void _validarYAvanzar(TextEditingController controller, FocusNode nextFocus) {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    try {
-      if (controller == _nombreController || controller == _apellidoController) {
-        if (!auth.validarNombreApellido(controller.text)) throw Exception('Nombre/Apellido inválido: solo letras y espacios, min 3 chars');
-      } else if (controller == _emailController) {
-        final email = controller.text;
-        if (email.isNotEmpty && !EmailValidator.validate(email)) {
-          throw Exception('Correo electrónico inválido');
-        } else if (EmailValidator.validate(email)) {  // Solo determina rol si es válido
-          _rol = auth.determinarRol(email);
-          setState(() {});
-        }
-      } else if (controller == _passwordController) {
-        if (!auth.validarPassword(controller.text)) throw Exception('Contraseña débil: min 8 chars, mayús, minús, número, especial');
-      }
-      setState(() => _error = null);
-      FocusScope.of(context).requestFocus(nextFocus);
-    } catch (e) {
-      setState(() => _error = e.toString());
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
+    final auth = Provider.of<AuthProvider>(context);
+    final isDark = theme.isDarkTheme;
 
     return Scaffold(
-      backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.primaryColor,
-        title: Text('Registro', style: TextStyle(color: theme.textColor)),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nombreController,
-              focusNode: _nombreFocus,
-              decoration: InputDecoration(
-                labelText: 'Nombre',
-                filled: true,
-                fillColor: theme.cardColor,
-                labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
-              ),
-              style: TextStyle(color: theme.textColor),
+      backgroundColor: isDark
+          ? const Color(0xFF5B4B8A)
+          : const Color(0xFFE3E9FF),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Container(
+            width: 340,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF4A3C73) : const Color(0xFFBBD3FF),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
             ),
-            TextField(
-              controller: _apellidoController,
-              focusNode: _apellidoFocus,
-              decoration: InputDecoration(
-                labelText: 'Apellido',
-                filled: true,
-                fillColor: theme.cardColor,
-                labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
-              ),
-              style: TextStyle(color: theme.textColor),
-            ),
-            TextField(
-              controller: _emailController,
-              focusNode: _emailFocus,
-              keyboardType: TextInputType.emailAddress,  // Corregido: Permite ingreso completo de emails con @, etc.
-              decoration: InputDecoration(
-                labelText: 'Correo Electrónico',
-                filled: true,
-                fillColor: theme.cardColor,
-                labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
-              ),
-              style: TextStyle(color: theme.textColor),
-            ),
-            TextField(
-              controller: _passwordController,
-              focusNode: _passwordFocus,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Contraseña',
-                filled: true,
-                fillColor: theme.cardColor,
-                labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
-              ),
-              style: TextStyle(color: theme.textColor),
-            ),
-            TextField(
-              controller: _confirmPasswordController,
-              focusNode: _confirmPasswordFocus,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Confirmar Contraseña',
-                filled: true,
-                fillColor: theme.cardColor,
-                labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
-              ),
-              style: TextStyle(color: theme.textColor),
-            ),
-            if (_error != null) Text(_error!, style: TextStyle(color: Colors.red)),
-            if (_rol == 1)  // Estudiante
-              DropdownButton<String>(
-                value: _curso,
-                hint: Text('Selecciona tu curso', style: TextStyle(color: theme.textColor)),
-                items: cursosDisponibles.map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(color: theme.textColor)))).toList(),
-                onChanged: (v) => setState(() => _curso = v),
-              ),
-            if (_rol == 2)  // Profesor
-              Column(
-                children: [
-                  TextField(
-                    onChanged: (v) => _area = v,
-                    decoration: InputDecoration(
-                      labelText: 'Área en que trabaja',
-                      filled: true,
-                      fillColor: theme.cardColor,
-                      labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 🔹 Encabezado con logo y botón de tema
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.note_alt_rounded,
+                      size: 28,
+                      color: Colors.white,
                     ),
-                    style: TextStyle(color: theme.textColor),
+                    const SizedBox(width: 5),
+                    Text(
+                      "MyNote.",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        isDark ? Icons.light_mode : Icons.dark_mode,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                      onPressed: theme.toggleTheme,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 25),
+
+                // 🔹 Ícono de usuario
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: isDark ? Colors.white24 : Colors.black26,
+                  child: const Icon(
+                    Icons.person,
+                    size: 35,
+                    color: Colors.white,
                   ),
-                  Text('Cursos a los que dicta:', style: TextStyle(color: theme.textColor)),
-                  ...cursosDisponibles.map((c) => CheckboxListTile(
-                    title: Text(c, style: TextStyle(color: theme.textColor)),
-                    value: _cursosAsignados.contains(c),
-                    onChanged: (bool? val) {
-                      setState(() {
-                        if (val!) _cursosAsignados.add(c);
-                        else _cursosAsignados.remove(c);
-                      });
+                ),
+
+                const SizedBox(height: 25),
+
+                // 🔹 Título
+                Text(
+                  "Regístrate",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // 🔹 Campos de texto
+                _buildField("Nombre", _nombreController, isDark),
+                const SizedBox(height: 10),
+                _buildField("Apellido", _apellidoController, isDark),
+                const SizedBox(height: 10),
+                _buildField("Correo", _emailController, isDark, email: true),
+                const SizedBox(height: 10),
+                _buildField(
+                  "Contraseña",
+                  _passwordController,
+                  isDark,
+                  obscure: true,
+                ),
+                const SizedBox(height: 10),
+                _buildField(
+                  "Confirmar contraseña",
+                  _confirmPasswordController,
+                  isDark,
+                  obscure: true,
+                ),
+
+                const SizedBox(height: 15),
+
+                if (_error != null)
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+
+                // 🔹 Botón de registro
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark
+                          ? Colors.deepPurple[500]
+                          : Colors.blue[600],
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      try {
+                        await auth.register(
+                          nombre: _nombreController.text,
+                          apellido: _apellidoController.text,
+                          email: _emailController.text,
+                          password: _passwordController.text,
+                          confirmPassword: _confirmPasswordController.text,
+                          curso: null,
+                          area: null,
+                          cursosAsignados: [],
+                        );
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => MateriasScreen()),
+                        );
+                      } catch (e) {
+                        setState(() => _error = e.toString());
+                      }
                     },
-                  )),
-                ],
-              ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
-              onPressed: () async {
-                try {
-                  await Provider.of<AuthProvider>(context, listen: false).register(
-                    nombre: _nombreController.text,
-                    apellido: _apellidoController.text,
-                    email: _emailController.text,
-                    password: _passwordController.text,
-                    confirmPassword: _confirmPasswordController.text,
-                    curso: _curso,
-                    area: _area,
-                    cursosAsignados: _cursosAsignados,
-                  );
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MateriasScreen()));
-                } catch (e) {
-                  setState(() => _error = e.toString());
-                }
-              },
-              child: Text('Registrarse', style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      'Registrarte',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                // 🔹 Enlace de regreso a login
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      fontSize: 14,
+                    ),
+                    children: [
+                      const TextSpan(text: "¿Ya tienes cuenta? "),
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => LoginScreen()),
+                          ),
+                          child: Text(
+                            "inicia sesión aquí.",
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.blue[200]
+                                  : Colors.blue[700],
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildField(
+    String hint,
+    TextEditingController controller,
+    bool isDark, {
+    bool obscure = false,
+    bool email = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: email ? TextInputType.emailAddress : TextInputType.text,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: isDark ? Colors.deepPurple[800] : Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      ),
+      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
     );
   }
 }

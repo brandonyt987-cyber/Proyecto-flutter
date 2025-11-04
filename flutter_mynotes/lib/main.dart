@@ -11,7 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // 🔥 SOLO PARA DESARROLLO: Borra la BD al iniciar
-  // await DatabaseService.instance.deleteDatabase();
+  await DatabaseService.instance.deleteDatabase();
   
   runApp(const MyNoteApp());
 }

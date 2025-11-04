@@ -1,265 +1,234 @@
+// Modificación a vistas/materias.dart: Renombrar a materias_screen.dart para consistencia. Integrar con providers (Auth, Materias, Theme). Diferenciar por rol. Usar BD en vez de lista local. Incluir formulario para crear materia en lugar de dialog (modificar crear_materia.dart a widget inline o integrarlo).
+
 import 'package:flutter/material.dart';
-import 'crear_materia.dart';
-import '../provider/theme_provider.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/profesor.dart';
+import '../providers/materia_provider.dart';  // Corregido: Plural 'materias_provider.dart'
+import '../providers/theme_provider.dart';
+import 'notas_screen.dart';
 
-// Clase principal
-class MaterialScreen extends StatefulWidget {
-  const MaterialScreen({Key? key}) : super(key: key);
-
+class MateriasScreen extends StatefulWidget {
   @override
-  _MaterialScreenState createState() => _MaterialScreenState();
+  _MateriasScreenState createState() => _MateriasScreenState();
 }
 
-class _MaterialScreenState extends State<MaterialScreen> {
-  final ThemeProvider _themeProvider = ThemeProvider();
-  final List<Map<String, dynamic>> _materias = [];
-
-  void _AgregarMateria(String nombre) {
-    setState(() {
-      _materias.add({
-        'nombre': nombre,
-        'notas': [],
-        'promedio': 0.0,
-      });
-    });
+class _MateriasScreenState extends State<MateriasScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final materiasProv = Provider.of<MateriasProvider>(context, listen: false);
+    if (auth.usuarioActual!.rol == 2) {
+      materiasProv.loadMateriasForProfesor(auth.profesorActual!.id);  // Usar profesorActual.id
+    } else {
+      materiasProv.loadMateriasForEstudiante(auth.estudianteActual!.curso);  // Usar estudianteActual.curso
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _themeProvider,
-      builder: (context, child) {
-        return Scaffold(
-          backgroundColor: _themeProvider.backgroundColor,
-          appBar: AppBar(
-            backgroundColor: _themeProvider.primaryColor,
-            elevation: 0,
-            title: Row(
-              children: [
-                const Text(
-                  'MyNote. ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-                Icon(
-                  _themeProvider.isDarkTheme ? Icons.nights_stay : Icons.wb_sunny,
-                  color: Colors.yellow,
-                  size: 24,
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(
-                  _themeProvider.isDarkTheme ? Icons.wb_sunny : Icons.nights_stay,
-                  color: Colors.white,
-                ),
-                onPressed: () {
-                  _themeProvider.toggleTheme();
-                },
-              ),
-            ],
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Materias',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: _themeProvider.textColor,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildMenuCard(
-                        context,
-                        Icons.edit,
-                        'Nueva Materia',
-                        () async {
-                          final resultado = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CrearMateria(
-                                themeProvider: _themeProvider,
-                              ),
-                            ),
-                          );
-                          if (resultado != null) {
-                            _AgregarMateria(resultado);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: _buildMenuCard(
-                        context,
-                        Icons.content_paste,
-                        'ver materias',
-                        () {
-                          //navegar por las listas de materias
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                Expanded(
-                  child: _materias.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No hay materias creadas',
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: _themeProvider.textColor.withOpacity(0.6),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _materias.length,
-                          itemBuilder: (context, index) {
-                            final materia = _materias[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 15),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: _themeProvider.cardColor,
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.5),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      materia['nombre'],
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: _themeProvider.textColor,
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {
-                                      setState(() {
-                                        _materias.removeAt(index);
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            backgroundColor: _themeProvider.cardColor,
-            selectedItemColor: _themeProvider.primaryColor,
-            unselectedIconTheme: const IconThemeData(color: Colors.grey),
-            currentIndex: 0,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: '',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.grid_view),
-                label: '',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.circle),
-                label: '',
-              ),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: _themeProvider.primaryColor,
-            onPressed: () async {
-              final resultado = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CrearMateria(
-                    themeProvider: _themeProvider,
-                  ),
-                ),
-              );
-              if (resultado != null) {
-                _AgregarMateria(resultado);
-              }
-            },
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
-        );
-      },
-    );
-  }
+    final auth = Provider.of<AuthProvider>(context);
+    final materiasProv = Provider.of<MateriasProvider>(context);
+    final theme = Provider.of<ThemeProvider>(context);
+    final usuario = auth.usuarioActual!;
 
-  Widget _buildMenuCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    VoidCallback onTap,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _themeProvider.cardColor,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: theme.primaryColor,
+        title: Text('Materias', style: TextStyle(color: theme.textColor)),
+        actions: [
+          IconButton(
+            icon: Icon(theme.isDarkTheme ? Icons.light_mode : Icons.dark_mode),
+            onPressed: theme.toggleTheme,
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: auth.logout,
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(15),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              children: [
-                Icon(
-                  icon,
-                  color: _themeProvider.primaryColor,
-                  size: 30,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _themeProvider.textColor,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Materias',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: theme.textColor,
+              ),
             ),
-          ),
+            const SizedBox(height: 20),
+            if (usuario.rol == 2) _buildFormularioCrearMateria(context, auth.profesorActual!, theme, materiasProv),
+            Expanded(
+              child: materiasProv.materias.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No hay materias',
+                        style: TextStyle(color: theme.textColor.withOpacity(0.6), fontSize: 18),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: materiasProv.materias.length,
+                      itemBuilder: (_, i) {
+                        final materia = materiasProv.materias[i];
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => NotasScreen(materiaId: materia.id!),
+                            ),
+                          ),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 15),
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  materia.nombre,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.textColor,
+                                  ),
+                                ),
+                                Text(
+                                  'Profesor: ${usuario.nombre} ${usuario.apellido}',
+                                  style: TextStyle(color: theme.textColor),
+                                ),
+                                Text(
+                                  'Horario: ${materia.horarioInicio} - ${materia.horarioFin}',
+                                  style: TextStyle(color: theme.textColor),
+                                ),
+                                Text(
+                                  'Días: ${materia.dias.join(', ')}',
+                                  style: TextStyle(color: theme.textColor),
+                                ),
+                                Text(
+                                  'Salón: ${materia.salon}',
+                                  style: TextStyle(color: theme.textColor),
+                                ),
+                                Text(
+                                  'Cursos: ${materia.cursosAsignados.join(', ')}',
+                                  style: TextStyle(color: theme.textColor),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFormularioCrearMateria(BuildContext context, Profesor profesor, ThemeProvider theme, MateriasProvider materiasProv) {
+    final _nombreController = TextEditingController();
+    List<String> _diasSeleccionados = [];
+    final _horarioInicioController = TextEditingController();
+    final _horarioFinController = TextEditingController();
+    int? _salon;
+    List<String> _cursosAsignados = [];
+    String? _error;
+
+    final materiasDisponibles = ['matemáticas', 'sociales', 'inglés', 'ciencias naturales'];
+
+    return Column(
+      children: [
+        DropdownButton<String>(
+          hint: Text('Nombre de la materia', style: TextStyle(color: theme.textColor)),
+          items: materiasDisponibles.map((m) => DropdownMenuItem(value: m, child: Text(m, style: TextStyle(color: theme.textColor)))).toList(),
+          onChanged: (v) => _nombreController.text = v!,
+        ),
+        Text('Días de clase:', style: TextStyle(color: theme.textColor)),
+        ...['lunes', 'martes', 'miércoles', 'jueves', 'viernes'].map((d) => CheckboxListTile(
+          title: Text(d, style: TextStyle(color: theme.textColor)),
+          value: _diasSeleccionados.contains(d),
+          onChanged: (val) {
+            setState(() {
+              if (val!) _diasSeleccionados.add(d);
+              else _diasSeleccionados.remove(d);
+            });
+          },
+        )),
+        TextField(
+          controller: _horarioInicioController,
+          decoration: InputDecoration(
+            labelText: 'Horario inicio (HH:MM)',
+            filled: true,
+            fillColor: theme.cardColor,
+            labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
+          ),
+          style: TextStyle(color: theme.textColor),
+        ),
+        TextField(
+          controller: _horarioFinController,
+          decoration: InputDecoration(
+            labelText: 'Horario fin (HH:MM)',
+            filled: true,
+            fillColor: theme.cardColor,
+            labelStyle: TextStyle(color: theme.textColor.withOpacity(0.6)),
+          ),
+          style: TextStyle(color: theme.textColor),
+        ),
+        DropdownButton<int>(
+          hint: Text('Salón (1-7)', style: TextStyle(color: theme.textColor)),
+          items: List.generate(7, (i) => DropdownMenuItem(value: i+1, child: Text('${i+1}', style: TextStyle(color: theme.textColor)))),
+          onChanged: (v) => _salon = v,
+        ),
+        Text('Cursos asignados:', style: TextStyle(color: theme.textColor)),
+        ...profesor.cursosAsignados.map((c) => CheckboxListTile(  // Usar profesor.cursosAsignados
+          title: Text(c, style: TextStyle(color: theme.textColor)),
+          value: _cursosAsignados.contains(c),
+          onChanged: (val) {
+            setState(() {
+              if (val!) _cursosAsignados.add(c);
+              else _cursosAsignados.remove(c);
+            });
+          },
+        )),
+        if (_error != null) Text(_error!, style: TextStyle(color: Colors.red)),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: theme.primaryColor),
+          onPressed: () async {
+            try {
+              await materiasProv.crearMateria(
+                nombre: _nombreController.text,
+                profesorId: profesor.id,  // Usar profesor.id
+                dias: _diasSeleccionados,
+                horarioInicio: _horarioInicioController.text,
+                horarioFin: _horarioFinController.text,
+                salon: _salon!,
+                cursosAsignados: _cursosAsignados,
+              );
+              setState(() {});  // Recargar lista
+            } catch (e) {
+              setState(() => _error = e.toString());
+            }
+          },
+          child: Text('Crear Materia', style: TextStyle(color: Colors.white)),
+        ),
+        const SizedBox(height: 30),
+      ],
     );
   }
 }

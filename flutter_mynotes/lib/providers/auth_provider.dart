@@ -3,13 +3,16 @@ import 'dart:convert';
 import '../models/usuario.dart';
 import '../models/estudiantes.dart';
 import '../models/profesor.dart';
-import '../services/database_services.dart';  // Ajusta si es services.dart
+import '../services/database_services.dart';
 
 class AuthProvider with ChangeNotifier {
   Usuario? _usuarioActual;
   Estudiante? _estudianteActual;
   Profesor? _profesorActual;
+
   Usuario? get usuarioActual => _usuarioActual;
+  Estudiante? get estudianteActual => _estudianteActual;
+  Profesor? get profesorActual => _profesorActual;
 
   bool validarNombreApellido(String valor) {
     final regex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{6,40}$');
@@ -17,75 +20,150 @@ class AuthProvider with ChangeNotifier {
   }
 
   bool validarPassword(String password) {
-    final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_-])[A-Za-z\d@$!%*?&_-]{8,}$');
+    final regex = RegExp(
+        r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_-])[A-Za-z\d@$!%*?&_-]{8,}$');
     return regex.hasMatch(password);
   }
 
   int determinarRol(String email) {
-    if (email.endsWith('@gmail.com')) return 1;
-    if (email.endsWith('@profesor.com')) return 2;
+    // Remover @admin si existe para determinar el rol real
+    final emailLimpio = email.replaceAll('@admin', '');
+    
+    if (emailLimpio.endsWith('@gmail.com')) return 1;
+    if (emailLimpio.endsWith('@profesor.com')) return 2;
     throw Exception('Dominio no válido');
   }
 
-  Future<void> register({
-    required String nombre, required String apellido, required String email,
-    required String password, required String confirmPassword,
-    String? curso, String? area, List<String>? cursosAsignados,
-  }) async {
-    if (!validarNombreApellido(nombre)) throw Exception('Nombre inválido');
-    if (!validarNombreApellido(apellido)) throw Exception('Apellido inválido');
-    if (password != confirmPassword) throw Exception('Contraseñas no coinciden');
-    if (!validarPassword(password)) throw Exception('Contraseña débil');
+  // ✅ VERIFICAR SI ES ADMIN (Puerta trasera)
+  bool esAdmin(String email) {
+    return email.contains('@admin');
+  }
 
-    final rol = determinarRol(email);
+  // ✅ ELIMINAR USUARIO ADMIN
+  Future<void> eliminarUsuarioAdmin(String email) async {
+    // Remover el @admin para obtener el email real
+    final emailReal = email.replaceAll('@admin', '');
+    await DatabaseService.instance.deleteUsuarioByEmail(emailReal);
+  }
+
+  Future<void> register({
+    required String nombre,
+    required String apellido,
+    required String email,
+    required String password,
+    required String confirmPassword,
+    String? curso,
+    String? area,
+    List<String>? cursosAsignados,
+  }) async {
+    // Validaciones
+    if (!validarNombreApellido(nombre)) {
+      throw Exception('Nombre inválido (6-40 caracteres, solo letras)');
+    }
+    if (!validarNombreApellido(apellido)) {
+      throw Exception('Apellido inválido (6-40 caracteres, solo letras)');
+    }
+    if (password != confirmPassword) {
+      throw Exception('Las contraseñas no coinciden');
+    }
+    if (!validarPassword(password)) {
+      throw Exception(
+          'Contraseña débil (mín. 8 caracteres, mayúscula, minúscula, número y símbolo)');
+    }
+
+    // Determinar rol y guardar email limpio
+    final emailLimpio = email.replaceAll('@admin', '');
+    final rol = determinarRol(emailLimpio);
+
     final usuarioMap = {
       'nombre': nombre,
       'apellido': apellido,
-      'email': email,
+      'email': emailLimpio, // Guardar email sin @admin
       'password': password,
       'rol': rol,
     };
-    final usuarioId = await DatabaseService.instance.insertUsuario(usuarioMap);
 
-    if (rol == 1) {
-      if (curso == null) throw Exception('Curso requerido para estudiante');
-      final estudianteMap = {
-        'usuario_id': usuarioId,
-        'curso': curso,
-      };
-      final estudianteId = await DatabaseService.instance.insertEstudiante(estudianteMap);
-      _estudianteActual = Estudiante.fromMap({...estudianteMap, 'id': estudianteId});
-    } else if (rol == 2) {
-      if (area == null || cursosAsignados == null) throw Exception('Área y cursos requeridos para profesor');
-      final profesorMap = {
-        'usuario_id': usuarioId,
-        'area': area,
-        'cursos_asignados': jsonEncode(cursosAsignados),
-      };
-      final profesorId = await DatabaseService.instance.insertProfesor(profesorMap);
-      _profesorActual = Profesor.fromMap({...profesorMap, 'id': profesorId});
+    try {
+      final usuarioId =
+          await DatabaseService.instance.insertUsuario(usuarioMap);
+
+      if (rol == 1) {
+        // ESTUDIANTE
+        if (curso == null || curso.isEmpty) {
+          throw Exception('Curso requerido para estudiante');
+        }
+        final estudianteMap = {
+          'usuario_id': usuarioId,
+          'curso': curso,
+        };
+        final estudianteId =
+            await DatabaseService.instance.insertEstudiante(estudianteMap);
+        _estudianteActual =
+            Estudiante.fromMap({...estudianteMap, 'id': estudianteId});
+      } else if (rol == 2) {
+        // PROFESOR
+        if (area == null || area.isEmpty) {
+          throw Exception('Área requerida para profesor');
+        }
+        if (cursosAsignados == null || cursosAsignados.isEmpty) {
+          throw Exception('Debe seleccionar al menos un curso');
+        }
+        final profesorMap = {
+          'usuario_id': usuarioId,
+          'area': area,
+          'cursos_asignados': jsonEncode(cursosAsignados),
+        };
+        final profesorId =
+            await DatabaseService.instance.insertProfesor(profesorMap);
+        _profesorActual =
+            Profesor.fromMap({...profesorMap, 'id': profesorId});
+      }
+
+      _usuarioActual = Usuario.fromMap({...usuarioMap, 'id': usuarioId});
+      notifyListeners();
+    } catch (e) {
+      // Re-lanzar con mensaje limpio
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
-
-    _usuarioActual = Usuario.fromMap({...usuarioMap, 'id': usuarioId});
-    notifyListeners();
   }
 
   Future<void> login(String email, String password) async {
-    final usuarioMap = await DatabaseService.instance.getUsuarioByEmail(email);
-    if (usuarioMap == null || usuarioMap['password'] != password) throw Exception('Credenciales inválidas');
+    try {
+      // Limpiar email antes de buscar
+      final emailLimpio = email.replaceAll('@admin', '');
+      
+      final usuarioMap =
+          await DatabaseService.instance.getUsuarioByEmail(emailLimpio);
+      
+      if (usuarioMap == null) {
+        throw Exception('Usuario no encontrado');
+      }
+      
+      if (usuarioMap['password'] != password) {
+        throw Exception('Contraseña incorrecta');
+      }
 
-    _usuarioActual = Usuario.fromMap(usuarioMap);
-    final rol = usuarioMap['rol'] as int;
+      _usuarioActual = Usuario.fromMap(usuarioMap);
+      final rol = usuarioMap['rol'] as int;
 
-    if (rol == 1) {
-      final estudianteMap = await DatabaseService.instance.getEstudianteByUsuarioId(usuarioMap['id']);
-      if (estudianteMap != null) _estudianteActual = Estudiante.fromMap(estudianteMap);
-    } else if (rol == 2) {
-      final profesorMap = await DatabaseService.instance.getProfesorByUsuarioId(usuarioMap['id']);
-      if (profesorMap != null) _profesorActual = Profesor.fromMap(profesorMap);
+      if (rol == 1) {
+        final estudianteMap = await DatabaseService.instance
+            .getEstudianteByUsuarioId(usuarioMap['id']);
+        if (estudianteMap != null) {
+          _estudianteActual = Estudiante.fromMap(estudianteMap);
+        }
+      } else if (rol == 2) {
+        final profesorMap = await DatabaseService.instance
+            .getProfesorByUsuarioId(usuarioMap['id']);
+        if (profesorMap != null) {
+          _profesorActual = Profesor.fromMap(profesorMap);
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
-
-    notifyListeners();
   }
 
   void logout() {
@@ -94,8 +172,4 @@ class AuthProvider with ChangeNotifier {
     _profesorActual = null;
     notifyListeners();
   }
-
-  // Getters adicionales si necesitas
-  Estudiante? get estudianteActual => _estudianteActual;
-  Profesor? get profesorActual => _profesorActual;
 }

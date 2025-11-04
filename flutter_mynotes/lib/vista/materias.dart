@@ -5,6 +5,7 @@ import '../providers/materia_provider.dart';
 import '../providers/theme_provider.dart';
 import 'notas_screen.dart';
 import 'crear_materia_modal.dart';
+import 'login_screen.dart'; // ✅ Importar LoginScreen
 
 class MateriasScreen extends StatefulWidget {
   @override
@@ -33,6 +34,46 @@ class _MateriasScreenState extends State<MateriasScreen> {
     }
   }
 
+  // ✅ FUNCIÓN PARA CERRAR SESIÓN
+  void _cerrarSesion(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Cerrar Sesión'),
+        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () {
+              // Cerrar el diálogo primero
+              Navigator.of(dialogContext).pop();
+              
+              // Hacer logout
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              auth.logout();
+              
+              // Navegar al login
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => LoginScreen()),
+                (route) => false, // Eliminar todas las rutas anteriores
+              );
+            },
+            child: const Text(
+              'Cerrar Sesión',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -59,10 +100,7 @@ class _MateriasScreenState extends State<MateriasScreen> {
           ),
           IconButton(
             icon: Icon(Icons.logout, color: theme.textColor),
-            onPressed: () {
-              auth.logout();
-              Navigator.of(context).pushReplacementNamed('/login');
-            },
+            onPressed: () => _cerrarSesion(context), // ✅ Usar la nueva función
           ),
         ],
       ),
@@ -87,7 +125,9 @@ class _MateriasScreenState extends State<MateriasScreen> {
                       ),
                     ),
                     Text(
-                      esProfesor ? 'Profesor' : 'Estudiante - ${auth.estudianteActual!.curso}',
+                      esProfesor
+                          ? 'Profesor'
+                          : 'Estudiante - ${auth.estudianteActual!.curso}',
                       style: TextStyle(
                         fontSize: 16,
                         color: theme.textColor.withOpacity(0.7),
@@ -104,16 +144,16 @@ class _MateriasScreenState extends State<MateriasScreen> {
                       ),
                     ),
                     onPressed: () async {
-                      final resultado = await showDialog(  // Cambiar de showModalBottomSheet a showDialog
-                      context: context,
-                      builder: (context) => CrearMateriaModal(),
-                    );
+                      final resultado = await showDialog(
+                        context: context,
+                        builder: (context) => CrearMateriaModal(),
+                      );
                       if (resultado == true) {
                         _cargarMaterias(); // Recargar materias después de crear
                       }
                     },
-                    icon: Icon(Icons.add, color: Colors.white),
-                    label: Text(
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text(
                       'Crear Materia',
                       style: TextStyle(color: Colors.white),
                     ),
@@ -121,7 +161,6 @@ class _MateriasScreenState extends State<MateriasScreen> {
               ],
             ),
             const SizedBox(height: 30),
-
             // 🔹 Lista de materias
             Expanded(
               child: materiasProv.materias.isEmpty
@@ -156,7 +195,8 @@ class _MateriasScreenState extends State<MateriasScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => NotasScreen(materiaId: materia.id!),
+                                builder: (_) =>
+                                    NotasScreen(materiaId: materia.id!),
                               ),
                             );
                           },
@@ -181,7 +221,8 @@ class _MateriasScreenState extends State<MateriasScreen> {
                                   width: 50,
                                   height: 50,
                                   decoration: BoxDecoration(
-                                    color: theme.primaryColor.withOpacity(0.2),
+                                    color:
+                                        theme.primaryColor.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(
@@ -194,7 +235,8 @@ class _MateriasScreenState extends State<MateriasScreen> {
                                 // Info de la materia
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         materia.nombre,
@@ -208,14 +250,16 @@ class _MateriasScreenState extends State<MateriasScreen> {
                                       Text(
                                         '${materia.horarioInicio} - ${materia.horarioFin}',
                                         style: TextStyle(
-                                          color: theme.textColor.withOpacity(0.7),
+                                          color: theme.textColor
+                                              .withOpacity(0.7),
                                           fontSize: 14,
                                         ),
                                       ),
                                       Text(
                                         'Salón ${materia.salon} • ${materia.dias.join(', ')}',
                                         style: TextStyle(
-                                          color: theme.textColor.withOpacity(0.7),
+                                          color: theme.textColor
+                                              .withOpacity(0.7),
                                           fontSize: 14,
                                         ),
                                       ),
@@ -223,7 +267,8 @@ class _MateriasScreenState extends State<MateriasScreen> {
                                         Text(
                                           'Cursos: ${materia.cursosAsignados.join(', ')}',
                                           style: TextStyle(
-                                            color: theme.textColor.withOpacity(0.7),
+                                            color: theme.textColor
+                                                .withOpacity(0.7),
                                             fontSize: 14,
                                           ),
                                         ),

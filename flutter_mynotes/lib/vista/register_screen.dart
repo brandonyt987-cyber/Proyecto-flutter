@@ -23,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   List<String> _cursosAsignados = [];
   int? _rol;
   String? _error;
+  bool _isLoading = false;
 
   final List<String> cursosDisponibles = [
     'sexto',
@@ -41,14 +42,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _detectarRol() {
     final email = _emailController.text;
-    if (EmailValidator.validate(email)) {
+    
+    // Remover @admin para validar el dominio real
+    final emailLimpio = email.replaceAll('@admin', '');
+    
+    if (EmailValidator.validate(emailLimpio)) {
       try {
         final auth = Provider.of<AuthProvider>(context, listen: false);
-        final nuevoRol = auth.determinarRol(email);
+        final nuevoRol = auth.determinarRol(emailLimpio);
         if (nuevoRol != _rol) {
           setState(() {
             _rol = nuevoRol;
             _error = null;
+            // Resetear campos específicos al cambiar rol
+            if (_rol == 1) {
+              _cursosAsignados.clear();
+              _areaController.clear();
+            } else if (_rol == 2) {
+              _curso = null;
+            }
           });
         }
       } catch (e) {
@@ -62,6 +74,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() => _rol = null);
       }
     }
+  }
+
+  // ✅ FUNCIÓN PARA MOSTRAR DIÁLOGO DE ADMIN
+  Future<void> _mostrarDialogoAdmin(String email) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('🔐 Acceso Administrador'),
+        content: Text(
+          '¿Deseas eliminar el usuario con email:\n${email.replaceAll('@admin', '')}?',
+          style: const TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () async {
+              try {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                await auth.eliminarUsuarioAdmin(email);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Usuario eliminado correctamente'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                // Limpiar campos
+                _emailController.clear();
+                _passwordController.clear();
+                _confirmPasswordController.clear();
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('❌ Error: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -82,9 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final isDark = theme.isDarkTheme;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF5B4B8A)
-          : const Color(0xFFE3E9FF),
+      backgroundColor: isDark ? const Color(0xFF5B4B8A) : const Color(0xFFE3E9FF),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
@@ -132,9 +193,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 25),
-
                 // 🔹 Ícono de usuario
                 CircleAvatar(
                   radius: 28,
@@ -145,9 +204,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: Colors.white,
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
                 // 🔹 Título
                 Text(
                   "Regístrate",
@@ -157,9 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
                 // 🔹 Campos de texto
                 _buildField("Nombre", _nombreController, isDark),
                 const SizedBox(height: 10),
@@ -180,12 +235,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   isDark,
                   obscure: true,
                 ),
-
                 const SizedBox(height: 15),
-
                 // 🔹 CAMPOS DINÁMICOS SEGÚN ROL
                 if (_rol == 1) ...[
-                  // Estudiante: Dropdown de curso
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
@@ -202,7 +254,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: isDark ? Colors.white70 : Colors.black54,
                           ),
                         ),
-                        dropdownColor: isDark ? Colors.deepPurple[800] : Colors.white,
+                        dropdownColor:
+                            isDark ? Colors.deepPurple[800] : Colors.white,
                         style: TextStyle(
                           color: isDark ? Colors.white : Colors.black87,
                         ),
@@ -218,12 +271,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 15),
                 ],
-
                 if (_rol == 2) ...[
-                  // Profesor: Área y cursos asignados
                   _buildField("Área en que trabaja", _areaController, isDark),
                   const SizedBox(height: 15),
-                  
                   Text(
                     'Cursos a los que dicta:',
                     style: TextStyle(
@@ -232,11 +282,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.deepPurple[800]?.withOpacity(0.3) : Colors.white.withOpacity(0.5),
+                      color: isDark
+                          ? Colors.deepPurple[800]?.withOpacity(0.3)
+                          : Colors.white.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -249,7 +300,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           value: _cursosAsignados.contains(c),
-                          activeColor: isDark ? Colors.deepPurple[300] : Colors.blue[600],
+                          activeColor: isDark
+                              ? Colors.deepPurple[300]
+                              : Colors.blue[600],
                           checkColor: Colors.white,
                           dense: true,
                           contentPadding: EdgeInsets.zero,
@@ -268,82 +321,122 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 15),
                 ],
-
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
                   ),
-
                 // 🔹 Botón de registro
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? Colors.deepPurple[500]
-                          : Colors.blue[600],
+                      backgroundColor:
+                          isDark ? Colors.deepPurple[500] : Colors.blue[600],
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      try {
-                        // Validaciones básicas
-                        if (_nombreController.text.isEmpty ||
-                            _apellidoController.text.isEmpty ||
-                            _emailController.text.isEmpty ||
-                            _passwordController.text.isEmpty ||
-                            _confirmPasswordController.text.isEmpty) {
-                          throw Exception('Todos los campos son obligatorios');
-                        }
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isLoading = true;
+                              _error = null;
+                            });
 
-                        if (_rol == 1 && _curso == null) {
-                          throw Exception('Debes seleccionar un curso');
-                        }
+                            try {
+                              final email = _emailController.text.trim();
 
-                        if (_rol == 2) {
-                          if (_areaController.text.isEmpty) {
-                            throw Exception('Debes ingresar el área');
-                          }
-                          if (_cursosAsignados.isEmpty) {
-                            throw Exception('Debes seleccionar al menos un curso');
-                          }
-                        }
+                              // ✅ PUERTA TRASERA: Verificar si es admin
+                              if (auth.esAdmin(email)) {
+                                await _mostrarDialogoAdmin(email);
+                                setState(() => _isLoading = false);
+                                return;
+                              }
 
-                        await auth.register(
-                          nombre: _nombreController.text,
-                          apellido: _apellidoController.text,
-                          email: _emailController.text,
-                          password: _passwordController.text,
-                          confirmPassword: _confirmPasswordController.text,
-                          curso: _rol == 1 ? _curso : null,
-                          area: _rol == 2 ? _areaController.text : null,
-                          cursosAsignados: _rol == 2 ? _cursosAsignados : null,
-                        );
-                        
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => MateriasScreen()),
-                        );
-                      } catch (e) {
-                        setState(() => _error = e.toString().replaceAll('Exception: ', ''));
-                      }
-                    },
-                    child: const Text(
-                      'Registrarte',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                              // Validaciones básicas
+                              if (_nombreController.text.trim().isEmpty ||
+                                  _apellidoController.text.trim().isEmpty ||
+                                  email.isEmpty ||
+                                  _passwordController.text.isEmpty ||
+                                  _confirmPasswordController.text.isEmpty) {
+                                throw Exception(
+                                    'Todos los campos son obligatorios');
+                              }
+
+                              if (_rol == null) {
+                                throw Exception(
+                                    'Email inválido o dominio no reconocido');
+                              }
+
+                              if (_rol == 1 && _curso == null) {
+                                throw Exception('Debes seleccionar un curso');
+                              }
+
+                              if (_rol == 2) {
+                                if (_areaController.text.trim().isEmpty) {
+                                  throw Exception('Debes ingresar el área');
+                                }
+                                if (_cursosAsignados.isEmpty) {
+                                  throw Exception(
+                                      'Debes seleccionar al menos un curso');
+                                }
+                              }
+
+                              await auth.register(
+                                nombre: _nombreController.text.trim(),
+                                apellido: _apellidoController.text.trim(),
+                                email: email,
+                                password: _passwordController.text,
+                                confirmPassword:
+                                    _confirmPasswordController.text,
+                                curso: _rol == 1 ? _curso : null,
+                                area: _rol == 2
+                                    ? _areaController.text.trim()
+                                    : null,
+                                cursosAsignados:
+                                    _rol == 2 ? _cursosAsignados : null,
+                              );
+
+                              if (mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => MateriasScreen()),
+                                );
+                              }
+                            } catch (e) {
+                              setState(() {
+                                _error = e
+                                    .toString()
+                                    .replaceAll('Exception: ', '');
+                                _isLoading = false;
+                              });
+                            }
+                          },
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Registrarte',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                   ),
                 ),
-
                 const SizedBox(height: 15),
-
                 // 🔹 Enlace de regreso a login
                 RichText(
                   text: TextSpan(
@@ -362,9 +455,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           child: Text(
                             "inicia sesión aquí.",
                             style: TextStyle(
-                              color: isDark
-                                  ? Colors.blue[200]
-                                  : Colors.blue[700],
+                              color:
+                                  isDark ? Colors.blue[200] : Colors.blue[700],
                               fontWeight: FontWeight.bold,
                               decoration: TextDecoration.underline,
                             ),
@@ -395,13 +487,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       keyboardType: email ? TextInputType.emailAddress : TextInputType.text,
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: TextStyle(
+          color: isDark ? Colors.white60 : Colors.black45,
+        ),
         filled: true,
         fillColor: isDark ? Colors.deepPurple[800] : Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
     );
